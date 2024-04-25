@@ -125,4 +125,4 @@ replace github.com/apache/thrift => github.com/apache/thrift v0.14.1
 
 replace gopkg.in/macaron.v1 => ./pkg/macaron
 
-replace xorm.io/xorm v0.8.2 => github.com/positivelong/xorm v0.8.105
+replace xorm.io/xorm v0.8.2 => github.com/positivelong/xorm v0.8.106

@@ -61,7 +61,7 @@ var supportedDialects = map[string]dialectFunc{
 	MySQL:                  NewMysqlDialect,
 	SQLite:                 NewSQLite3Dialect,
 	Postgres:               NewPostgresDialect,
-	DM:                     NewPostgresDialect,
+	DM:                     NewDmDialect,
 	MySQL + "WithHooks":    NewMysqlDialect,
 	SQLite + "WithHooks":   NewSQLite3Dialect,
 	Postgres + "WithHooks": NewPostgresDialect,

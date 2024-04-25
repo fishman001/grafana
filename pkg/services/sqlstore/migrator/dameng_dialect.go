@@ -48,6 +48,33 @@ func (db *DmDialect) BooleanStr(value bool) string {
 	return "0"
 }
 
+func (b *DmDialect) ColString(col *Column) string {
+	sql := b.dialect.Quote(col.Name) + " "
+
+	sql += b.dialect.SQLType(col) + " "
+
+	if col.IsPrimaryKey {
+		sql += "PRIMARY KEY "
+		if col.IsAutoIncrement {
+			sql += b.dialect.AutoIncrStr() + " "
+		}
+	}
+
+	if b.dialect.ShowCreateNull() && !col.IsPrimaryKey {
+		if col.Nullable {
+			sql += "NULL "
+		} else {
+			sql += "NOT NULL "
+		}
+	}
+
+	if col.Default != "" {
+		sql += "DEFAULT " + b.dialect.Default(col) + " "
+	}
+
+	return sql
+}
+
 func (db *DmDialect) SQLType(c *Column) string {
 	var res string
 	switch t := c.Type; t {
@@ -135,26 +162,26 @@ func (db *DmDialect) ErrorMessage(err error) string {
 }
 
 func (db *DmDialect) UpdateTableSQL(tableName string, columns []*Column) string {
-	var statements = []string{}
-
-	statements = append(statements, "DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-
+	var statements []string
 	for _, col := range columns {
-		statements = append(statements, "MODIFY "+col.StringNoPk(db))
+		statements = append(statements, col.StringNoPk(db))
 	}
-
-	return "ALTER TABLE " + db.Quote(tableName) + " " + strings.Join(statements, ", ") + ";"
+	return fmt.Sprintf("alter table %s.%s modify (%s);",
+		db.Quote(db.engine.Dialect().URI().Schema),
+		db.Quote(tableName),
+		strings.Join(statements, ", "),
+	)
 }
 
 func (db *DmDialect) IndexCheckSQL(tableName, indexName string) (string, []interface{}) {
-	args := []interface{}{tableName, indexName}
-	sql := "SELECT 1 FROM " + db.Quote("INFORMATION_SCHEMA") + "." + db.Quote("STATISTICS") + " WHERE " + db.Quote("TABLE_SCHEMA") + " = DATABASE() AND " + db.Quote("TABLE_NAME") + "=? AND " + db.Quote("INDEX_NAME") + "=?"
+	args := []interface{}{tableName, indexName, db.engine.Dialect().URI().Schema}
+	sql := `SELECT INDEX_NAME FROM ALL_INDEXES WHERE TABLE_NAME = ? AND INDEX_NAME = ? AND OWNER = ?`
 	return sql, args
 }
 
 func (db *DmDialect) ColumnCheckSQL(tableName, columnName string) (string, []interface{}) {
-	args := []interface{}{tableName, columnName}
-	sql := "SELECT 1 FROM " + db.Quote("INFORMATION_SCHEMA") + "." + db.Quote("COLUMNS") + " WHERE " + db.Quote("TABLE_SCHEMA") + " = DATABASE() AND " + db.Quote("TABLE_NAME") + "=? AND " + db.Quote("COLUMN_NAME") + "=?"
+	args := []interface{}{tableName, columnName, db.engine.Dialect().URI().Schema}
+	sql := "SELECT 1 FROM ALL_INDEXES WHERE TABLE_NAME = ? AND INDEX_NAME = ? AND OWNER = ?"
 	return sql, args
 }
 
@@ -169,14 +196,8 @@ func (db *DmDialect) CleanDB() error {
 	for _, table := range tables {
 		switch table.Name {
 		default:
-			if _, err := sess.Exec("set foreign_key_checks = 0"); err != nil {
-				return errutil.Wrap("failed to disable foreign key checks", err)
-			}
-			if _, err := sess.Exec("drop table " + table.Name + " ;"); err != nil {
+			if _, err := sess.Exec(fmt.Sprintf(`drop table "%s";`, table.Name)); err != nil {
 				return errutil.Wrapf(err, "failed to delete table %q", table.Name)
-			}
-			if _, err := sess.Exec("set foreign_key_checks = 1"); err != nil {
-				return errutil.Wrap("failed to disable foreign key checks", err)
 			}
 		}
 	}
@@ -214,7 +235,7 @@ func (db *DmDialect) TruncateDBTables() error {
 	return nil
 }
 
-// UpsertSQL returns the upsert sql statement for PostgreSQL dialect
+// UpsertSQL returns the upsert sql statement for dameng dialect
 func (db *DmDialect) UpsertSQL(tableName string, keyCols, updateCols []string) string {
 	columnsStr := strings.Builder{}
 	colPlaceHoldersStr := strings.Builder{}
@@ -237,4 +258,27 @@ func (db *DmDialect) UpsertSQL(tableName string, keyCols, updateCols []string) s
 		setStr.String(),
 	)
 	return s
+}
+
+func (b *DmDialect) DropIndexSQL(tableName string, index *Index) string {
+	quote := b.dialect.Quote
+	name := index.XName(tableName)
+	return fmt.Sprintf("DROP INDEX %s.%s", quote(b.engine.Dialect().URI().Schema), quote(name))
+}
+
+func (b *DmDialect) CreateIndexSQL(tableName string, index *Index) string {
+	quote := b.dialect.Quote
+	var unique string
+	if index.Type == UniqueIndex {
+		unique = " UNIQUE"
+	}
+
+	idxName := index.XName(tableName)
+
+	quotedCols := []string{}
+	for _, col := range index.Cols {
+		quotedCols = append(quotedCols, b.dialect.Quote(col))
+	}
+
+	return fmt.Sprintf("CREATE%s INDEX %v ON %s.%v (%v);", unique, quote(idxName), quote(b.engine.Dialect().URI().Schema), quote(tableName), strings.Join(quotedCols, ","))
 }
