@@ -14,7 +14,7 @@ replace k8s.io/client-go => k8s.io/client-go v0.18.8
 require (
 	cloud.google.com/go/storage v1.14.0
 	cuelang.org/go v0.3.2
-	gitee.com/travelliu/dm v1.8.11192
+	gitee.com/travelliu/dm v1.8.11193-0.20230629135533-ee5bb360bd66
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.16.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.9.1
 	github.com/BurntSushi/toml v0.3.1

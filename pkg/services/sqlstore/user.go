@@ -519,7 +519,7 @@ func GetSignedInUser(ctx context.Context, query *models.GetSignedInUserQuery) er
 		u.id             as user_id,
 		u.is_admin       as is_grafana_admin,
 		u.email          as email,
-		u.login          as login,
+		'u.login'          as "login",
 		u.name           as name,
 		u.help_flags1    as help_flags1,
 		u.last_seen_at   as last_seen_at,
