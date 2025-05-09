@@ -41,23 +41,26 @@ export function NavToolbar({
   const homeNav = useSelector((state) => state.navIndex)[HOME_NAV_ID];
   const styles = useStyles2(getStyles);
   const breadcrumbs = buildBreadcrumbs(sectionNav, pageNav, homeNav);
+  const isDevelopment = process.env.NODE_ENV === 'development'
 
   return (
     <div data-testid={Components.NavToolbar.container} className={styles.pageToolbar}>
       <div className={styles.menuButton}>
-        <IconButton
-          id={TOGGLE_BUTTON_ID}
-          name="bars"
-          tooltip={
-            state.megaMenuOpen
-              ? t('navigation.toolbar.close-menu', 'Close menu')
-              : t('navigation.toolbar.open-menu', 'Open menu')
-          }
-          tooltipPlacement="bottom"
-          size="xl"
-          onClick={onToggleMegaMenu}
-          data-testid={Components.NavBar.Toggle.button}
-        />
+        {
+          isDevelopment && <IconButton
+            id={TOGGLE_BUTTON_ID}
+            name="bars"
+            tooltip={
+              state.megaMenuOpen
+                ? t('navigation.toolbar.close-menu', 'Close menu')
+                : t('navigation.toolbar.open-menu', 'Open menu')
+            }
+            tooltipPlacement="bottom"
+            size="xl"
+            onClick={onToggleMegaMenu}
+            data-testid={Components.NavBar.Toggle.button}
+          />
+        }
       </div>
       <Breadcrumbs breadcrumbs={breadcrumbs} className={styles.breadcrumbsWrapper} />
       <div className={styles.actions}>
@@ -88,9 +91,13 @@ const getStyles = (theme: GrafanaTheme2) => {
     breadcrumbsWrapper: css({
       display: 'flex',
       overflow: 'hidden',
+      alignItems: 'center',
       [theme.breakpoints.down('sm')]: {
         minWidth: '50%',
       },
+      'ol': {
+        marginBottom: '0px',
+      }
     }),
     pageToolbar: css({
       height: TOP_BAR_LEVEL_HEIGHT,
